@@ -4,6 +4,7 @@
 #include <sstream>
 
 #define BUFSIZE 32
+#define FREQ_MULTIPLYER 24
 
 AnalogIn ThrottleX(A0);
 AnalogIn ThrottleY(A1);
@@ -49,6 +50,7 @@ void parse(size_t len) {
             else if(inst == "$LT")
                 throttle = level;
             else printf("Invalid instruction\n");
+            printf("current pulse width: %d us\n", throttle.read_pulsewidth_us() / FREQ_MULTIPLYER);
         }
     } else {
         printf("Invalid format\n");
@@ -69,8 +71,10 @@ int main()
     memset(buf, 0, BUFSIZE);
     printf("Started listening for command.\n");
     
-    throttle.period_us(250);
-    printf("Throttle PWD frequency: %f Hz, period: %d us\n", 1 / ((float)throttle.read_period_us() * 1e-6), throttle.read_period_us());
+    throttle.period_us(2000);
+    float period_us = throttle.read_period_us() / FREQ_MULTIPLYER;
+    float period_s = period_us  * 1e-6;
+    printf("Throttle PWD frequency: %f Hz, period: %f us\n", 1 / period_s, period_us);
 
     while (1) {
         if(curlen == BUFSIZE)
