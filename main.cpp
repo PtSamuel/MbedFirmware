@@ -9,14 +9,26 @@
 #define ON_TIME_MIN_US 1100.0f
 #define ON_TIME_MAX_US 1900.0f
 #define ARM_ON_TIME 1500.0f
+#define delim ' '
 
 AnalogIn ThrottleX(A0);
 AnalogIn ThrottleY(A1);
-PwmOut led1(LED1);
-PwmOut led2(LED2);
-PwmOut led3(LED3);
-PwmOut led4(LED4);
-PwmOut throttle(D6);
+PwmOut led_1(LED1);
+PwmOut led_2(LED2);
+PwmOut led_3(LED3);
+PwmOut led_4(LED4);
+PwmOut throttle_1(p26);
+PwmOut throttle_2(p25);
+PwmOut throttle_3(D4);
+PwmOut throttle_4(D5);
+PwmOut throttle_5(D6);
+PwmOut throttle_6(D7);
+
+/**
+    $LT x1, x2, x3, x4, x5, x6
+    $LED1 x
+    $L 
+ */
 
 static BufferedSerial serial(USBTX, USBRX); // tx, rx
 static char buf[BUFSIZE];
@@ -30,42 +42,55 @@ float map_duty_cycle(float level) { // [-1.0, 1.0]
     return ON_TIME / PWM_PERIOD_US;
 }
 
+void led_controller(PwmOut& led, std::stringstream& stream) {
+    float level;
+    if(stream >> level) {
+        if(level > 1.0f || level < -1.0f)
+            printf("Level must be between -1 and 1\n");
+        else
+            led = level;
+    } else {
+        printf("Invalid level.\n");
+    }
+}
+
+void throttle_controller(std::stringstream& stream) {
+    float t1, t2, t3, t4, t5, t6;
+    if(stream >> t1 >> t2 >> t3 >> t4 >> t5 >> t6) {
+        throttle_1 = map_duty_cycle(t1);
+        throttle_2 = map_duty_cycle(t2);
+        throttle_3 = map_duty_cycle(t3);
+        throttle_4 = map_duty_cycle(t4);
+        throttle_5 = map_duty_cycle(t5);
+        throttle_6 = map_duty_cycle(t6);
+    } else printf("Conversion failure.\n");
+}
+
+// len = length of buffer WITH \r
 void parse(size_t len) {
     bufcpy[len - 1] = 0;
-    // printf("Command received: %s\n", bufcpy);
     if(len == 1) {
         printf("Empty command.\n");
         return;
-    }
+    } else printf("Command received: %s\n", bufcpy);
     
     std::stringstream stream(bufcpy);
-    if(bufcpy[0] != '$') {
-        printf("Command must begin with $.\n");
-        return;
-    }   
+    string command;
+    float level;
 
-    std::string inst; float level; 
-    if(stream >> inst >> level) {
-        if(level > 1.0f || level < -1.0f)
-            printf("Level must be between -1 and 1\n");
-        else {
-            if(inst == "$L1")
-                led1 = level;
-            else if(inst == "$L2")
-                led2 = level;
-            else if(inst == "$L3")
-                led3 = level;
-            else if(inst == "$L4")
-                led4 = level;
-            else if(inst == "$LT")
-                throttle = map_duty_cycle(level);
-            else printf("Invalid instruction\n");
-
-            // printf("Current pulse width: %f us\n", throttle.read_pulsewidth_us() / FREQ_MULTIPLYER);
-        }
-    } else {
-        printf("Invalid format\n");
-    }
+    if(stream >> command) {
+        if(command == "$L1")
+            led_controller(led_1, stream);
+        else if(command == "$L2")
+            led_controller(led_2, stream);
+        else if(command == "$L3")
+            led_controller(led_3, stream);
+        else if(command == "$L4")
+            led_controller(led_4, stream);
+        else if(command == "$LT")
+            throttle_controller(stream);
+        else printf("Unrecognized command: %s\n", command.c_str());
+    } else printf("Invalid command\n");
 }
 
 void printbuf() {
@@ -82,8 +107,8 @@ int main()
     memset(buf, 0, BUFSIZE);
     printf("Started listening for command.\n");
     
-    throttle.period_us((int)PWM_PERIOD_US);
-    float period_us = (float)throttle.read_period_us() / FREQ_MULTIPLYER;
+    throttle_1.period_us((int)PWM_PERIOD_US);
+    float period_us = (float)throttle_1.read_period_us() / FREQ_MULTIPLYER;
     float period_s = period_us * 1e-6;
     printf("Throttle PWD frequency: %f Hz, period: %f us\n", 1 / period_s, period_us);
 
