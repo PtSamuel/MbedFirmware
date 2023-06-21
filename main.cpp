@@ -31,6 +31,7 @@ PwmOut throttle_6(D7);
  */
 
 static BufferedSerial serial(USBTX, USBRX); // tx, rx
+static BufferedSerial ping2(p13, p14); // tx, rx
 static char buf[BUFSIZE];
 static char bufcpy[BUFSIZE];
 static size_t curlen = 0;
@@ -104,32 +105,57 @@ void printbuf() {
 
 int main()
 {   
-    memset(buf, 0, BUFSIZE);
-    printf("Started listening for command.\n");
-    
-    throttle_1.period_us((int)PWM_PERIOD_US);
-    float period_us = (float)throttle_1.read_period_us() / FREQ_MULTIPLYER;
-    float period_s = period_us * 1e-6;
-    printf("Throttle PWD frequency: %f Hz, period: %f us\n", 1 / period_s, period_us);
+    ping2.set_baud(115200);
+    printf("Starting serial...\n");
 
-    while (1) {
-        if(curlen == BUFSIZE)
-            serial.read(buf + curlen - 1, 1);
-        else
-            serial.read(buf + curlen++, 1);
+    char msg1[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x04, 0x00, 0xa0, 0x00};
+    for(size_t i = 0; i < 12; i++)
+        ping2.write(&msg1[i], 1);
+    
+    char c;
+    while(true) {
+        printf("read return value: %d\n", ping2.read(&c, 1)); 
+        printf("Receiving byte...\n");
+        printf("0x%02X\n", (int)c);
+    }
+
+    printf("Sending more...\n");
+
+    char msg2[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x05, 0x00, 0xa1, 0x00};
+    for(size_t i = 0; i < 12; i++)
+        ping2.write(&msg2[i], 1);
+    
+    while(ping2.read(&c, 1)) { 
+        printf("Receiving byte...\n");
+        printf("0x%02X\n", (int)c);
+    }
+
+    // memset(buf, 0, BUFSIZE);
+    // printf("Started listening for command.\n");
+    
+    // throttle_1.period_us((int)PWM_PERIOD_US);
+    // float period_us = (float)throttle_1.read_period_us() / FREQ_MULTIPLYER;
+    // float period_s = period_us * 1e-6;
+    // printf("Throttle PWD frequency: %f Hz, period: %f us\n", 1 / period_s, period_us);
+
+    // while (1) {
+    //     if(curlen == BUFSIZE)
+    //         serial.read(buf + curlen - 1, 1);
+    //     else
+    //         serial.read(buf + curlen++, 1);
         
 
-        if(buf[curlen - 1] == '\r') {
-            std::memcpy(bufcpy, buf, curlen);
-            parse(curlen);
-            curlen = 0;
-        } else if(buf[curlen - 1] == 127) {
-            if(curlen > 1)
-                curlen -= 2;
-            else curlen = 0;
-        }
+    //     if(buf[curlen - 1] == '\r') {
+    //         std::memcpy(bufcpy, buf, curlen);
+    //         parse(curlen);
+    //         curlen = 0;
+    //     } else if(buf[curlen - 1] == 127) {
+    //         if(curlen > 1)
+    //             curlen -= 2;
+    //         else curlen = 0;
+    //     }
 
-        // printbuf();
+    //     // printbuf();
 
-    }
+    // }
 }
