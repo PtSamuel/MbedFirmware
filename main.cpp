@@ -106,15 +106,17 @@ void printbuf() {
 int main()
 {   
     i2c.frequency(200000);
-    i2c.start();
-    i2c.write(0x27 << 1);
-    i2c.write(0x0);
-    i2c.stop();
+    
+    // i2c.start();
+    printf("Write status: %d\n", i2c.write(0x27));
+    printf("Write status: %d\n", i2c.write(0));
 
     char data[4];
     i2c.read(0x27, data, 4);
     printf("[0x%02X, 0x%02X, 0x%02X, 0x%02X]\n", data[0], data[1], data[2], data[3]);
-    
+    // if remove the below 2 lines, behaves differently
+    i2c.read(0x27, data, 4);
+    printf("[0x%02X, 0x%02X, 0x%02X, 0x%02X]\n", data[0], data[1], data[2], data[3]);
 
     // char data[4] = {0, 0, 0, 0};
     // for(int i = 0; i < 128; i++) {
