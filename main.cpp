@@ -34,7 +34,7 @@ static char buf[BUFSIZE];
 static char bufcpy[BUFSIZE];
 static size_t curlen = 0;
 
-static I2C i2c(p9, p10);
+static I2C i2c(p28, p27);
 
 float map_duty_cycle(float level) { // [-1.0, 1.0]
     if (level > 1.0f || level < -1.0f) 
@@ -105,18 +105,54 @@ void printbuf() {
 
 int main()
 {   
-    i2c.frequency(200000);
-    
-    // i2c.start();
-    printf("Write status: %d\n", i2c.write(0x27));
-    printf("Write status: %d\n", i2c.write(0));
 
-    char data[4];
-    i2c.read(0x27, data, 4);
-    printf("[0x%02X, 0x%02X, 0x%02X, 0x%02X]\n", data[0], data[1], data[2], data[3]);
-    // if remove the below 2 lines, behaves differently
-    i2c.read(0x27, data, 4);
-    printf("[0x%02X, 0x%02X, 0x%02X, 0x%02X]\n", data[0], data[1], data[2], data[3]);
+    ThisThread::sleep_for(500ms);
+
+    i2c.start();
+    printf("Status: %d\n", i2c.write(0x27 << 1));
+    i2c.stop();
+
+    char c;
+    
+    i2c.start();
+    printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
+    c = i2c.read(1);
+    printf("Read: 0x%02X\n", c);
+    c = i2c.read(1);
+    printf("Read: 0x%02X\n", c);
+    i2c.stop();
+
+    i2c.start();
+    printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
+    c = i2c.read(1);
+    printf("Read: 0x%02X\n", c);
+    c = i2c.read(1);
+    printf("Read: 0x%02X\n", c);
+    i2c.stop();
+
+    i2c.start();
+    printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
+    c = i2c.read(1);
+    printf("Read: 0x%02X\n", c);
+    c = i2c.read(1);
+    printf("Read: 0x%02X\n", c);
+    i2c.stop();
+
+    i2c.start();
+    printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
+    c = i2c.read(1);
+    printf("Read: 0x%02X\n", c);
+    c = i2c.read(1);
+    printf("Read: 0x%02X\n", c);
+    i2c.stop();
+
+
+
+
+    // char data[4] = {0, 0, 0, 0};
+    // i2c.write(0x27, data, 1);
+    // i2c.read(0x27, data, 4);
+    // printf("[0x%02X, 0x%02X, 0x%02X, 0x%02X]\n", data[0], data[1], data[2], data[3]);    
 
     // char data[4] = {0, 0, 0, 0};
     // for(int i = 0; i < 128; i++) {
@@ -124,9 +160,6 @@ int main()
     // }
 
     // ThisThread::sleep_for(5ms);
-
-    // i2c.read(0x27, data, 4);
-    // printf("[0x%02X, 0x%02X, 0x%02X, 0x%02X]\n", data[0], data[1], data[2], data[3]);
 
     // ping2.set_baud(115200);
     // printf("Starting serial...\n");
