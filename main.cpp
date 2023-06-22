@@ -103,6 +103,13 @@ void printbuf() {
     printf("\n");
 }
 
+uint16_t checksum(char* arr, size_t len) {
+    uint16_t sum = 0;
+    for(size_t i = 0; i < len; i++)
+        sum += arr[i];
+    return sum;
+}
+
 int main()
 {   
 
@@ -162,20 +169,22 @@ int main()
     // ThisThread::sleep_for(5ms);
 
     ping2.set_baud(115200);
+
     printf("Starting serial...\n");
+    ThisThread::sleep_for(1s);
 
     char msg1[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x05, 0x00, 0xa1, 0x00};
     for(size_t i = 0; i < 12; i++)
         ping2.write(&msg1[i], 1);
-
-    ThisThread::sleep_for(20ms);
+    
+    ThisThread::sleep_for(500ms);
     
     char c;
     while(ping2.readable()) {
         ping2.read(&c, 1); 
         printf("Receiving byte: ");
         printf("0x%02X\n", (int)c);
-        printf("ping2 readable: %d\n", ping2.readable());
+        // printf("ping2 readable: %d\n", ping2.readable());
     }
 
     printf("Sending more...\n");
@@ -184,7 +193,36 @@ int main()
     for(size_t i = 0; i < 12; i++)
         ping2.write(&msg2[i], 1);
 
-    ThisThread::sleep_for(20ms);
+    ThisThread::sleep_for(500ms);
+    
+    while(ping2.readable()) { 
+        ping2.read(&c, 1); 
+        printf("Receiving byte: ");
+        printf("0x%02X\n", (int)c);
+    }
+
+    printf("Sending more...\n");
+
+    // char msg3[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0xb0, 0x04, 0x50, 0x01};
+    char msg3[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x04, 0x00, 0xa0, 0x00};
+    for(size_t i = 0; i < 12; i++)
+        ping2.write(&msg3[i], 1);
+
+    ThisThread::sleep_for(500ms);
+    
+    while(ping2.readable()) { 
+        ping2.read(&c, 1); 
+        printf("Receiving byte: ");
+        printf("0x%02X\n", (int)c);
+    }
+
+    printf("Sending more...\n");
+
+    char msg4[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0xbb, 0x04, 0x5b, 0x01};
+    for(size_t i = 0; i < 12; i++)
+        ping2.write(&msg4[i], 1);
+
+    ThisThread::sleep_for(500ms);
     
     while(ping2.readable()) { 
         ping2.read(&c, 1); 
