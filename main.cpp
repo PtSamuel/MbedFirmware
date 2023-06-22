@@ -29,12 +29,12 @@ PwmOut throttle_6(D7);
  */
 
 static BufferedSerial serial(USBTX, USBRX); // tx, rx
-static BufferedSerial ping2(p13, p14); // tx, rx
+static BufferedSerial ping2(p28, p27); // tx, rx
 static char buf[BUFSIZE];
 static char bufcpy[BUFSIZE];
 static size_t curlen = 0;
 
-static I2C i2c(p28, p27);
+// static I2C i2c(p28, p27);
 
 float map_duty_cycle(float level) { // [-1.0, 1.0]
     if (level > 1.0f || level < -1.0f) 
@@ -106,45 +106,45 @@ void printbuf() {
 int main()
 {   
 
-    ThisThread::sleep_for(500ms);
+    // ThisThread::sleep_for(500ms);
 
-    i2c.start();
-    printf("Status: %d\n", i2c.write(0x27 << 1));
-    i2c.stop();
+    // i2c.start();
+    // printf("Status: %d\n", i2c.write(0x27 << 1));
+    // i2c.stop();
 
-    char c;
+    // char c;
     
-    i2c.start();
-    printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
-    c = i2c.read(1);
-    printf("Read: 0x%02X\n", c);
-    c = i2c.read(1);
-    printf("Read: 0x%02X\n", c);
-    i2c.stop();
+    // i2c.start();
+    // printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
+    // c = i2c.read(1);
+    // printf("Read: 0x%02X\n", c);
+    // c = i2c.read(1);
+    // printf("Read: 0x%02X\n", c);
+    // i2c.stop();
 
-    i2c.start();
-    printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
-    c = i2c.read(1);
-    printf("Read: 0x%02X\n", c);
-    c = i2c.read(1);
-    printf("Read: 0x%02X\n", c);
-    i2c.stop();
+    // i2c.start();
+    // printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
+    // c = i2c.read(1);
+    // printf("Read: 0x%02X\n", c);
+    // c = i2c.read(1);
+    // printf("Read: 0x%02X\n", c);
+    // i2c.stop();
 
-    i2c.start();
-    printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
-    c = i2c.read(1);
-    printf("Read: 0x%02X\n", c);
-    c = i2c.read(1);
-    printf("Read: 0x%02X\n", c);
-    i2c.stop();
+    // i2c.start();
+    // printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
+    // c = i2c.read(1);
+    // printf("Read: 0x%02X\n", c);
+    // c = i2c.read(1);
+    // printf("Read: 0x%02X\n", c);
+    // i2c.stop();
 
-    i2c.start();
-    printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
-    c = i2c.read(1);
-    printf("Read: 0x%02X\n", c);
-    c = i2c.read(1);
-    printf("Read: 0x%02X\n", c);
-    i2c.stop();
+    // i2c.start();
+    // printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
+    // c = i2c.read(1);
+    // printf("Read: 0x%02X\n", c);
+    // c = i2c.read(1);
+    // printf("Read: 0x%02X\n", c);
+    // i2c.stop();
 
 
 
@@ -161,32 +161,36 @@ int main()
 
     // ThisThread::sleep_for(5ms);
 
-    // ping2.set_baud(115200);
-    // printf("Starting serial...\n");
+    ping2.set_baud(115200);
+    printf("Starting serial...\n");
 
-    // char msg1[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x05, 0x00, 0xa1, 0x00};
-    // for(size_t i = 0; i < 12; i++)
-    //     ping2.write(&msg1[i], 1);
+    char msg1[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x05, 0x00, 0xa1, 0x00};
+    for(size_t i = 0; i < 12; i++)
+        ping2.write(&msg1[i], 1);
+
+    ThisThread::sleep_for(20ms);
     
-    // char c;
-    // while(ping2.readable()) {
-    //     ping2.read(&c, 1); 
-    //     printf("Receiving byte: ");
-    //     printf("0x%02X\n", (int)c);
-    //     printf("ping2 readable: %d\n", ping2.readable());
-    // }
+    char c;
+    while(ping2.readable()) {
+        ping2.read(&c, 1); 
+        printf("Receiving byte: ");
+        printf("0x%02X\n", (int)c);
+        printf("ping2 readable: %d\n", ping2.readable());
+    }
 
-    // printf("Sending more...\n");
+    printf("Sending more...\n");
 
-    // char msg2[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x04, 0x00, 0xa0, 0x00};
-    // for(size_t i = 0; i < 12; i++)
-    //     ping2.write(&msg2[i], 1);
+    char msg2[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x04, 0x00, 0xa0, 0x00};
+    for(size_t i = 0; i < 12; i++)
+        ping2.write(&msg2[i], 1);
+
+    ThisThread::sleep_for(20ms);
     
-    // while(ping2.readable()) { 
-    //     ping2.read(&c, 1); 
-    //     printf("Receiving byte...\n");
-    //     printf("0x%02X\n", (int)c);
-    // }
+    while(ping2.readable()) { 
+        ping2.read(&c, 1); 
+        printf("Receiving byte: ");
+        printf("0x%02X\n", (int)c);
+    }
 
     // memset(buf, 0, BUFSIZE);
     // printf("Started listening for command.\n");
