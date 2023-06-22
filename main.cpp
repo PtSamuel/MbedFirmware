@@ -11,8 +11,6 @@
 #define ARM_ON_TIME 1500.0f
 #define delim ' '
 
-AnalogIn ThrottleX(A0);
-AnalogIn ThrottleY(A1);
 PwmOut led_1(LED1);
 PwmOut led_2(LED2);
 PwmOut led_3(LED3);
@@ -36,9 +34,11 @@ static char buf[BUFSIZE];
 static char bufcpy[BUFSIZE];
 static size_t curlen = 0;
 
+static I2C i2c(p9, p10);
+
 float map_duty_cycle(float level) { // [-1.0, 1.0]
     if (level > 1.0f || level < -1.0f) 
-        return ARM_ON_TIME / PWM_PERIOD_US;
+        -ARM_ON_TIME / PWM_PERIOD_US;
     float ON_TIME = ON_TIME_MIN_US + (level + 1) / 2 * (ON_TIME_MAX_US - ON_TIME_MIN_US);
     return ON_TIME / PWM_PERIOD_US;
 }
@@ -105,30 +105,53 @@ void printbuf() {
 
 int main()
 {   
-    ping2.set_baud(115200);
-    printf("Starting serial...\n");
+    i2c.frequency(200000);
+    i2c.start();
+    i2c.write(0x27 << 1);
+    i2c.write(0x0);
+    i2c.stop();
 
-    char msg1[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x04, 0x00, 0xa0, 0x00};
-    for(size_t i = 0; i < 12; i++)
-        ping2.write(&msg1[i], 1);
+    char data[4];
+    i2c.read(0x27, data, 4);
+    printf("[0x%02X, 0x%02X, 0x%02X, 0x%02X]\n", data[0], data[1], data[2], data[3]);
     
-    char c;
-    while(true) {
-        printf("read return value: %d\n", ping2.read(&c, 1)); 
-        printf("Receiving byte...\n");
-        printf("0x%02X\n", (int)c);
-    }
 
-    printf("Sending more...\n");
+    // char data[4] = {0, 0, 0, 0};
+    // for(int i = 0; i < 128; i++) {
+    //     printf("%x Write status: %d\n", i, i2c.write(i, data, 0));
+    // }
 
-    char msg2[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x05, 0x00, 0xa1, 0x00};
-    for(size_t i = 0; i < 12; i++)
-        ping2.write(&msg2[i], 1);
+    // ThisThread::sleep_for(5ms);
+
+    // i2c.read(0x27, data, 4);
+    // printf("[0x%02X, 0x%02X, 0x%02X, 0x%02X]\n", data[0], data[1], data[2], data[3]);
+
+    // ping2.set_baud(115200);
+    // printf("Starting serial...\n");
+
+    // char msg1[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x05, 0x00, 0xa1, 0x00};
+    // for(size_t i = 0; i < 12; i++)
+    //     ping2.write(&msg1[i], 1);
     
-    while(ping2.read(&c, 1)) { 
-        printf("Receiving byte...\n");
-        printf("0x%02X\n", (int)c);
-    }
+    // char c;
+    // while(ping2.readable()) {
+    //     ping2.read(&c, 1); 
+    //     printf("Receiving byte: ");
+    //     printf("0x%02X\n", (int)c);
+    //     printf("ping2 readable: %d\n", ping2.readable());
+    // }
+
+    // printf("Sending more...\n");
+
+    // char msg2[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x04, 0x00, 0xa0, 0x00};
+    // for(size_t i = 0; i < 12; i++)
+    //     ping2.write(&msg2[i], 1);
+    
+    // while(ping2.readable()) { 
+    //     ping2.read(&c, 1); 
+    //     printf("Receiving byte...\n");
+    //     printf("0x%02X\n", (int)c);
+    // }
 
     // memset(buf, 0, BUFSIZE);
     // printf("Started listening for command.\n");
