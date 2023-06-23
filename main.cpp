@@ -1,4 +1,5 @@
 #include "mbed.h"
+#include <chrono>
 #include <string>
 #include <cmath>
 #include <sstream>
@@ -111,31 +112,33 @@ uint16_t checksum(char* arr, size_t len) {
     return sum;
 }
 
+static inline unsigned long now_ms() {
+    auto time = std::chrono::time_point_cast<std::chrono::milliseconds>(Kernel::Clock::now());
+    unsigned long time_ms = time.time_since_epoch().count(); 
+    return time_ms;
+}
+
 void measure_altitude() {
     char query[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0xbb, 0x04, 0x5b, 0x01};
     for(size_t i = 0; i < 12; i++)
         ping2.write(&query[i], 1);
 
-    ThisThread::sleep_for(500ms);
-
     char response[ALTITUDE_RESPONSE_LENGTH];
+
     for(size_t i = 0; i < ALTITUDE_RESPONSE_LENGTH; i++) {
-        if(!ping2.readable()) {
-            printf("Cannot receive next byte...\n");
-            return;
+        unsigned long start = now_ms();
+        while(!ping2.readable()) {
+            if(now_ms() - start > 500) {
+                printf("Cannot receive next byte...\n");
+                return;
+            }
         }
-        ping2.read(response + i, 1); 
-        // printf("Receiving byte: ");
-        // printf("0x%02X\n", response[i]);
+        ping2.read(response + i, 1);
     }
 
-    char depth[4];
-    depth[0] = response[11];
-    depth[1] = response[10];
-    depth[2] = response[9];
-    depth[3] = response[8];
     int actual_depth = *((int*)(response + 8));
-    printf("Depth: %d mm, confidence: %d\n", actual_depth, (int)response[12]);
+    
+    printf("[%lu] depth: %d mm, confidence: %d\n", now_ms(), actual_depth, (int)response[12]);
 }
 
 int main()
@@ -199,7 +202,6 @@ int main()
     ping2.set_baud(115200);
 
     printf("Starting serial...\n");
-    ThisThread::sleep_for(1s);
 
     while(1)
         measure_altitude();
