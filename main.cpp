@@ -31,7 +31,7 @@ PwmOut throttle_6(D7);
  */
 
 static BufferedSerial serial(USBTX, USBRX); // tx, rx
-static BufferedSerial ping2(p28, p27); // tx, rx
+static BufferedSerial ping2(p28, p27, 115200); // tx, rx
 static char buf[BUFSIZE];
 static char bufcpy[BUFSIZE];
 static size_t curlen = 0;
@@ -69,8 +69,44 @@ void throttle_controller(std::stringstream& stream) {
     } else printf("Conversion failure.\n");
 }
 
+static inline unsigned long now_ms() {
+    auto time = std::chrono::time_point_cast<std::chrono::milliseconds>(Kernel::Clock::now());
+    unsigned long time_ms = time.time_since_epoch().count(); 
+    return time_ms;
+}
+
+static bool measure_altitude(int *depth, float *confidence) {
+    char query[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0xbb, 0x04, 0x5b, 0x01};
+    for(size_t i = 0; i < 12; i++)
+        ping2.write(&query[i], 1);
+
+    char response[ALTITUDE_RESPONSE_LENGTH];
+
+    for(size_t i = 0; i < ALTITUDE_RESPONSE_LENGTH; i++) {
+        unsigned long start = now_ms();
+        while(!ping2.readable()) {
+            if(now_ms() - start > 500) {
+                printf("Cannot receive next byte...\n");
+                return false;
+            }
+        }
+        ping2.read(response + i, 1);
+    }
+
+    *depth = *((int*)(response + 8));
+    *confidence = (float)(response[12]) / 256.0f;
+
+    return true;
+}
+
+static void report_altitude() {
+    int depth; float confidence;
+    if(measure_altitude(&depth, &confidence))
+        printf("[%lu] depth: %d mm, confidence: %f\n", now_ms(), depth, confidence);
+}
+
 // len = length of buffer WITH \r
-void parse(size_t len) {
+static void parse(size_t len) {
     bufcpy[len - 1] = 0;
     if(len == 1) {
         printf("Empty command.\n");
@@ -92,6 +128,8 @@ void parse(size_t len) {
             led_controller(led_4, stream);
         else if(command == "$LT")
             throttle_controller(stream);
+        else if(command == "$ALT")
+            report_altitude();
         else printf("Unrecognized command: %s\n", command.c_str());
     } else printf("Invalid command\n");
 }
@@ -112,183 +150,34 @@ uint16_t checksum(char* arr, size_t len) {
     return sum;
 }
 
-static inline unsigned long now_ms() {
-    auto time = std::chrono::time_point_cast<std::chrono::milliseconds>(Kernel::Clock::now());
-    unsigned long time_ms = time.time_since_epoch().count(); 
-    return time_ms;
-}
-
-void measure_altitude() {
-    char query[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0xbb, 0x04, 0x5b, 0x01};
-    for(size_t i = 0; i < 12; i++)
-        ping2.write(&query[i], 1);
-
-    char response[ALTITUDE_RESPONSE_LENGTH];
-
-    for(size_t i = 0; i < ALTITUDE_RESPONSE_LENGTH; i++) {
-        unsigned long start = now_ms();
-        while(!ping2.readable()) {
-            if(now_ms() - start > 500) {
-                printf("Cannot receive next byte...\n");
-                return;
-            }
-        }
-        ping2.read(response + i, 1);
-    }
-
-    int actual_depth = *((int*)(response + 8));
-    
-    printf("[%lu] depth: %d mm, confidence: %d\n", now_ms(), actual_depth, (int)response[12]);
-}
-
 int main()
 {   
-
-    // ThisThread::sleep_for(500ms);
-
-    // i2c.start();
-    // printf("Status: %d\n", i2c.write(0x27 << 1));
-    // i2c.stop();
-
-    // char c;
+    memset(buf, 0, BUFSIZE);
+    printf("Started listening for command.\n");
     
-    // i2c.start();
-    // printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
-    // c = i2c.read(1);
-    // printf("Read: 0x%02X\n", c);
-    // c = i2c.read(1);
-    // printf("Read: 0x%02X\n", c);
-    // i2c.stop();
+    throttle_1.period_us((int)PWM_PERIOD_US);
+    float period_us = (float)throttle_1.read_period_us() / FREQ_MULTIPLYER;
+    float period_s = period_us * 1e-6;
+    printf("Throttle PWD frequency: %f Hz, period: %f us\n", 1 / period_s, period_us);
 
-    // i2c.start();
-    // printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
-    // c = i2c.read(1);
-    // printf("Read: 0x%02X\n", c);
-    // c = i2c.read(1);
-    // printf("Read: 0x%02X\n", c);
-    // i2c.stop();
-
-    // i2c.start();
-    // printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
-    // c = i2c.read(1);
-    // printf("Read: 0x%02X\n", c);
-    // c = i2c.read(1);
-    // printf("Read: 0x%02X\n", c);
-    // i2c.stop();
-
-    // i2c.start();
-    // printf("Status: %d\n", i2c.write((0x27 << 1) & 1));
-    // c = i2c.read(1);
-    // printf("Read: 0x%02X\n", c);
-    // c = i2c.read(1);
-    // printf("Read: 0x%02X\n", c);
-    // i2c.stop();
-
-
-
-
-    // char data[4] = {0, 0, 0, 0};
-    // i2c.write(0x27, data, 1);
-    // i2c.read(0x27, data, 4);
-    // printf("[0x%02X, 0x%02X, 0x%02X, 0x%02X]\n", data[0], data[1], data[2], data[3]);    
-
-    // char data[4] = {0, 0, 0, 0};
-    // for(int i = 0; i < 128; i++) {
-    //     printf("%x Write status: %d\n", i, i2c.write(i, data, 0));
-    // }
-
-    // ThisThread::sleep_for(5ms);
-
-    ping2.set_baud(115200);
-
-    printf("Starting serial...\n");
-
-    while(1)
-        measure_altitude();
-
-    // char msg1[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x05, 0x00, 0xa1, 0x00};
-    // for(size_t i = 0; i < 12; i++)
-    //     ping2.write(&msg1[i], 1);
-    
-    // ThisThread::sleep_for(500ms);
-    
-    // char c;
-    // while(ping2.readable()) {
-    //     ping2.read(&c, 1); 
-    //     printf("Receiving byte: ");
-    //     printf("0x%02X\n", (int)c);
-    //     // printf("ping2 readable: %d\n", ping2.readable());
-    // }
-
-    // printf("Sending more...\n");
-
-    // char msg2[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x04, 0x00, 0xa0, 0x00};
-    // for(size_t i = 0; i < 12; i++)
-    //     ping2.write(&msg2[i], 1);
-
-    // ThisThread::sleep_for(500ms);
-    
-    // while(ping2.readable()) { 
-    //     ping2.read(&c, 1); 
-    //     printf("Receiving byte: ");
-    //     printf("0x%02X\n", (int)c);
-    // }
-
-    // printf("Sending more...\n");
-
-    // // char msg3[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0xb0, 0x04, 0x50, 0x01};
-    // char msg3[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0x04, 0x00, 0xa0, 0x00};
-    // for(size_t i = 0; i < 12; i++)
-    //     ping2.write(&msg3[i], 1);
-
-    // ThisThread::sleep_for(500ms);
-    
-    // while(ping2.readable()) { 
-    //     ping2.read(&c, 1); 
-    //     printf("Receiving byte: ");
-    //     printf("0x%02X\n", (int)c);
-    // }
-
-    // printf("Sending more...\n");
-
-    // char msg4[] = {0x42, 0x52, 0x02, 0x00, 0x06, 0x00, 0x00, 0x00, 0xbb, 0x04, 0x5b, 0x01};
-    // for(size_t i = 0; i < 12; i++)
-    //     ping2.write(&msg4[i], 1);
-
-    // ThisThread::sleep_for(500ms);
-    
-    // while(ping2.readable()) { 
-    //     ping2.read(&c, 1); 
-    //     printf("Receiving byte: ");
-    //     printf("0x%02X\n", (int)c);
-    // }
-
-    // memset(buf, 0, BUFSIZE);
-    // printf("Started listening for command.\n");
-    
-    // throttle_1.period_us((int)PWM_PERIOD_US);
-    // float period_us = (float)throttle_1.read_period_us() / FREQ_MULTIPLYER;
-    // float period_s = period_us * 1e-6;
-    // printf("Throttle PWD frequency: %f Hz, period: %f us\n", 1 / period_s, period_us);
-
-    // while (1) {
-    //     if(curlen == BUFSIZE)
-    //         serial.read(buf + curlen - 1, 1);
-    //     else
-    //         serial.read(buf + curlen++, 1);
+    while (1) {
+        if(curlen == BUFSIZE)
+            serial.read(buf + curlen - 1, 1);
+        else
+            serial.read(buf + curlen++, 1);
         
 
-    //     if(buf[curlen - 1] == '\r') {
-    //         std::memcpy(bufcpy, buf, curlen);
-    //         parse(curlen);
-    //         curlen = 0;
-    //     } else if(buf[curlen - 1] == 127) {
-    //         if(curlen > 1)
-    //             curlen -= 2;
-    //         else curlen = 0;
-    //     }
+        if(buf[curlen - 1] == '\r') {
+            std::memcpy(bufcpy, buf, curlen);
+            parse(curlen);
+            curlen = 0;
+        } else if(buf[curlen - 1] == 127) {
+            if(curlen > 1)
+                curlen -= 2;
+            else curlen = 0;
+        }
 
-    //     // printbuf();
+        // printbuf();
 
-    // }
+    }
 }
