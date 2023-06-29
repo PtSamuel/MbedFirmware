@@ -150,16 +150,18 @@ uint16_t checksum(char* arr, size_t len) {
     return sum;
 }
 
-int main()
-{   
-    memset(buf, 0, BUFSIZE);
+void pwd_info() {
     printf("Started listening for command.\n");
-    
     throttle_1.period_us((int)PWM_PERIOD_US);
     float period_us = (float)throttle_1.read_period_us() / FREQ_MULTIPLYER;
     float period_s = period_us * 1e-6;
     printf("Throttle PWD frequency: %f Hz, period: %f us\n", 1 / period_s, period_us);
+}
 
+int main()
+{   
+    memset(buf, 0, BUFSIZE);
+    
     while (1) {
         if(curlen == BUFSIZE)
             serial.read(buf + curlen - 1, 1);
